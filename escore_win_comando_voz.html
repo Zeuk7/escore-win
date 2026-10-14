@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escore Estatístico WIN</title>
+<style>
+  :root{
+    --bg:#0A0E14;
+    --panel:#12171F;
+    --panel2:#171D27;
+    --line:#232B38;
+    --text:#C9D1D9;
+    --muted:#6B7686;
+    --amber:#E8A33D;
+    --green:#3DDC84;
+    --red:#FF5C5C;
+    --blue:#4FA7E8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'JetBrains Mono','SF Mono',Consolas,monospace;
+    font-size:14px; line-height:1.5;
+  }
+  header{ padding:20px 24px 16px; border-bottom:1px solid var(--line); }
+  header h1{ margin:0 0 6px; font-size:19px; font-weight:700; color:var(--amber); letter-spacing:0.2px; }
+  header p{margin:0; color:var(--muted); font-size:12.5px; max-width:760px;}
+  .wrap{display:grid; grid-template-columns:360px 1fr; gap:0; min-height:calc(100vh - 92px);}
+  @media (max-width:860px){ .wrap{grid-template-columns:1fr;} }
+
+  .sidebar{ background:var(--panel); border-right:1px solid var(--line); padding:18px; overflow-y:auto; }
+  .sidebar h2{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:0 0 12px;}
+  .sidebar h3.cat{font-size:10.5px; text-transform:uppercase; letter-spacing:0.8px; color:var(--amber); margin:20px 0 10px; padding-top:14px; border-top:1px solid var(--line);}
+  .sidebar h3.cat:first-of-type{margin-top:0; padding-top:0; border-top:none;}
+  .field{margin-bottom:14px; border-radius:4px; transition:box-shadow 0.2s;}
+  .field.principal{box-shadow:0 0 0 1px var(--amber), 0 0 12px rgba(232,163,61,0.25); padding:8px; margin:-8px -8px 6px -8px;}
+  .field label{display:block; font-size:12.5px; color:var(--text); margin-bottom:4px;}
+  .field .peso{color:var(--muted); font-size:11px;}
+  select, input[type=number]{
+    width:100%; background:var(--panel2); border:1px solid var(--line); border-left:4px solid var(--line); color:var(--text);
+    padding:8px 9px; border-radius:3px; font-family:inherit; font-size:13px; transition:border-left-color 0.15s;
+  }
+  select.pos{border-left-color:var(--green);}
+  select.neg{border-left-color:var(--red);}
+  select:focus, input:focus{outline:1px solid var(--amber); border-color:var(--amber);}
+  .hint{color:var(--muted); font-size:10.5px; margin-top:3px;}
+
+  .scorebar-wrap{margin-bottom:20px;}
+  .scorebar-track{position:relative; height:10px; border-radius:5px; margin-bottom:4px;
+    background:linear-gradient(to right, var(--red) 0%, var(--red) 15%, #4a3a2a 40%, var(--muted) 50%, #2a4a3a 60%, var(--green) 85%, var(--green) 100%);}
+  .scorebar-marker{position:absolute; top:-4px; width:3px; height:18px; background:#fff; border-radius:2px;
+    box-shadow:0 0 6px rgba(255,255,255,0.7); transform:translateX(-50%); transition:left 0.2s;}
+  .scorebar-labels{display:flex; justify-content:space-between; font-size:10px; color:var(--muted);}
+
+  .main{padding:22px 26px; overflow-y:auto;}
+  .metrics{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px;}
+  .metrics.metrics4{grid-template-columns:repeat(4,1fr);}
+  @media (max-width:700px){ .metrics.metrics4{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:600px){ .metrics{grid-template-columns:1fr;} }
+  .metric{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:14px 16px;}
+  .metric .lbl{font-size:10.5px; text-transform:uppercase; letter-spacing:0.6px; color:var(--muted); margin-bottom:6px;}
+  .metric .val{font-size:24px; font-weight:700;}
+  #scoreVal{color:var(--amber);}
+  #atualVal.pos{color:var(--green);} #atualVal.neg{color:var(--red);} #atualVal.zero{color:var(--muted);}
+  #vetorVal{font-size:14px; font-weight:600; color:var(--blue);}
+
+  .guia{
+    background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--amber);
+    border-radius:4px; padding:18px 20px; margin-bottom:24px;
+  }
+  .guia.ok{border-left-color:var(--green);}
+  .guia.warnbox{border-left-color:var(--red);}
+  .guia .regime{font-size:15px; font-weight:700; margin-bottom:8px;}
+  .guia p{margin:0; font-size:13.5px; color:var(--text);}
+  @keyframes pulseRegime{
+    0%{box-shadow:0 0 0 0 rgba(232,163,61,0.6);}
+    70%{box-shadow:0 0 0 10px rgba(232,163,61,0);}
+    100%{box-shadow:0 0 0 0 rgba(232,163,61,0);}
+  }
+  .pulso{animation:pulseRegime 0.9s ease-out 2; border-radius:6px;}
+
+  .probbar-track{display:flex; height:22px; border-radius:4px; overflow:hidden; margin-bottom:10px;}
+  .probbar-seg{transition:width 0.25s ease-out; display:flex; align-items:center; justify-content:center;}
+  .probbar-legend{display:flex; justify-content:space-between; font-size:12px; color:var(--text);}
+  .probbar-legend .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px;}
+  .probbar-legend b{margin-left:4px;}
+
+  .logsec h2{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:0 0 12px;}
+  .logform{display:grid; grid-template-columns:130px 130px 130px 1fr auto; gap:8px; margin-bottom:14px;}
+  @media (max-width:760px){ .logform{grid-template-columns:1fr 1fr; } .logform button, .logform input:last-of-type{grid-column:1/-1;} }
+  .logform input{background:var(--panel2); border:1px solid var(--line); color:var(--text); padding:8px 9px; border-radius:3px; font-family:inherit; font-size:12.5px;}
+  .logform button{ background:var(--amber); color:#0A0E14; border:none; border-radius:3px; padding:8px 14px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; }
+  .logform button:hover{opacity:0.85;}
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th, td{padding:8px 10px; border-bottom:1px solid var(--line); text-align:left;}
+  th{color:var(--muted); font-weight:600; text-transform:uppercase; font-size:10.5px; letter-spacing:0.4px;}
+  #logEmpty{color:var(--muted); font-size:12.5px; padding:10px 0;}
+  #refTable tr.ativa{background:rgba(232,163,61,0.12);}
+  #refTable tr.ativa td{color:var(--amber); font-weight:700;}
+  .exportBtn{ background:transparent; border:1px solid var(--line); color:var(--muted); padding:6px 12px; border-radius:3px; font-family:inherit; font-size:11.5px; cursor:pointer; margin-top:10px; }
+  .exportBtn:hover{border-color:var(--amber); color:var(--amber);}
+
+  .barrow{display:grid; grid-template-columns:70px 1fr 55px; align-items:center; gap:8px; margin-bottom:6px; font-size:11px;}
+  .barrow .barlbl{color:var(--muted);}
+  .bartrack{position:relative; height:16px; background:var(--panel2); border-radius:3px; overflow:hidden;}
+  .barfill{position:absolute; top:0; bottom:0; border-radius:3px;}
+  .barfill.pos{background:var(--green); left:50%;}
+  .barfill.neg{background:var(--red); right:50%;}
+  .barmid{position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--line);}
+  .barval{text-align:right; font-weight:600;}
+
+  .voice-panel{margin:14px 0 18px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+  .voice-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .voice-btn{background:var(--amber);color:#0A0E14;border:0;border-radius:4px;padding:10px 13px;font:700 12px inherit;cursor:pointer}
+  .voice-btn.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .voice-btn:disabled{opacity:.5;cursor:not-allowed}
+  .voice-status{font-size:12px;color:var(--muted);margin-top:9px;min-height:18px}
+  .voice-status.ok{color:var(--green)} .voice-status.err{color:var(--red)} .voice-transcript{font-size:12px;color:var(--text);margin-top:6px;overflow-wrap:anywhere}
+  .voice-help{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+  @media(max-width:600px){.voice-btn{flex:1}}
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Escore Estatístico WIN</h1>
+  <p>Pesos calibrados pela base estatística (correlação/hit-rate) — recalibrado aos 20 dias de registro. Entrada por variação percentual real de cada ativo, com faixas específicas por classe. Não é preditor de magnitude — é um filtro contra posição contrária e overextension.</p>
+</header>
+
+<section class="voice-panel" aria-label="Controle por voz" style="margin:14px 18px;">
+  <div class="voice-row">
+    <button class="voice-btn" id="voiceStart" type="button" onclick="iniciarVoz()">🎙️ Falar comando</button>
+    <button class="voice-btn secondary" type="button" onclick="lerDiagnostico()">🔊 Ler diagnóstico</button>
+    <button class="voice-btn secondary" type="button" onclick="pararVoz()">■ Parar áudio</button>
+  </div>
+  <div id="voiceStatus" class="voice-status" role="status" aria-live="polite">Pronto. Toque em “Falar comando” e diga uma alteração.</div>
+  <div id="voiceTranscript" class="voice-transcript"></div>
+  <div class="voice-help">
+    Exemplos: “WIN atual menos zero vírgula quarenta”; “gap mais um vírgula vinte”; “EWZ menos zero vírgula trinta”;
+    “DIs forte alta”; “ações Brasil neutro”; “agenda dado ruim”; “ler diagnóstico”.
+    <br>O microfone fica ativo apenas para um comando por vez. Confira a alteração exibida antes de agir no mercado.
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="sidebar">
+    <h2>Entrada de Vetores</h2>
+    <div id="fields"></div>
+
+    <div class="field" style="margin-top:18px;">
+      <label>📍 Variação ATUAL do WIN agora (%)</label>
+      <input type="number" id="variacaoAtual" step="0.10" value="0" placeholder="ex: 0.70 ou -0.50">
+    </div>
+
+    <div class="field">
+      <label>🕳️ Gap de Abertura do WIN (%)</label>
+      <input type="number" id="gapAbertura" step="0.10" value="0" placeholder="ex: 1.50 ou -1.20">
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="metrics metrics4">
+      <div class="metric"><div class="lbl">Score Direcional Estimado</div><div class="val" id="scoreVal">0.0%</div></div>
+      <div class="metric"><div class="lbl">Vetor Principal Dominante</div><div class="val" id="vetorVal">—</div></div>
+      <div class="metric"><div class="lbl">Variação Atual Informada</div><div class="val zero" id="atualVal">+0.00%</div></div>
+      <div class="metric"><div class="lbl">Alinhamento do Núcleo</div><div class="val" id="alinhamentoVal" style="font-size:16px;">⚪ Neutro</div></div>
+    </div>
+
+    <div class="scorebar-wrap">
+      <div class="scorebar-track"><div class="scorebar-marker" id="scoreMarker" style="left:50%;"></div></div>
+      <div class="scorebar-labels"><span>-100 (Forte Baixa)</span><span>0 (Neutro)</span><span>+100 (Forte Alta)</span></div>
+    </div>
+
+    <div class="guia" id="refTableBox" style="padding:0; overflow:hidden;">
+      <div style="padding:14px 18px 10px;">
+        <div class="regime" style="margin-bottom:2px;">📊 Referência: Score → Faixa Esperada do WIN</div>
+        <p style="color:var(--muted); font-size:12px;">Exemplo de leitura: score em 10 pontos cai na faixa "0% a +0,50%, pendendo para leve alta". A linha destacada é o score atual.</p>
+      </div>
+      <table id="refTable">
+        <thead><tr><th>Score</th><th>Leitura</th><th>Faixa esperada do WIN</th></tr></thead>
+        <tbody>
+          <tr data-min="70" data-max="1000"><td>70 a 100</td><td>Forte Alta</td><td>acima de +1,50%</td></tr>
+          <tr data-min="40" data-max="70"><td>40 a 70</td><td>Média Alta</td><td>+1,00% a +1,50%</td></tr>
+          <tr data-min="15" data-max="40"><td>15 a 40</td><td>Leve Alta</td><td>+0,50% a +1,00%</td></tr>
+          <tr data-min="0" data-max="15"><td>0 a 15</td><td>Neutro pendendo p/ leve alta</td><td>0% a +0,50%</td></tr>
+          <tr data-min="-15" data-max="0"><td>0 a -15</td><td>Neutro pendendo p/ leve baixa</td><td>0% a -0,50%</td></tr>
+          <tr data-min="-40" data-max="-15"><td>-15 a -40</td><td>Leve Baixa</td><td>-0,50% a -1,00%</td></tr>
+          <tr data-min="-70" data-max="-40"><td>-40 a -70</td><td>Média Baixa</td><td>-1,00% a -1,50%</td></tr>
+          <tr data-min="-1000" data-max="-70"><td>-70 a -100</td><td>Forte Baixa</td><td>abaixo de -1,50%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="guia" id="gapBox" style="display:none;">
+      <div class="regime" id="gapTitle">—</div>
+      <p id="gapTxt"></p>
+    </div>
+
+    <div class="guia" id="guiaBox">
+      <div class="regime" id="regimeTxt">—</div>
+      <p id="guiaTxt">Preencha os vetores ao lado.</p>
+    </div>
+
+    <div class="guia" id="ruidoBox" style="display:none;">
+      <div class="regime" id="ruidoTitle">—</div>
+      <p id="ruidoTxt"></p>
+    </div>
+
+    <div class="guia" id="expansaoBox" style="display:none;">
+      <div class="regime" id="expansaoTitle">—</div>
+      <p id="expansaoTxt"></p>
+    </div>
+
+    <div class="guia" id="giroBox" style="display:none;">
+      <div class="regime" id="giroTitle">—</div>
+      <p id="giroTxt"></p>
+    </div>
+
+    <div class="guia" id="diagBox">
+      <div class="regime">🔎 Diagnóstico de Nível</div>
+      <p id="diagTxt">Preencha a variação atual pra ver o diagnóstico.</p>
+      <p id="forteTxt" style="margin-top:8px; color:var(--muted); font-size:12.5px;"></p>
+    </div>
+
+    <div class="guia" id="probBox">
+      <div class="regime">📐 Probabilidade Estatística</div>
+      <p id="probTxt" style="margin-bottom:10px;">Preencha a variação atual pra ver a projeção.</p>
+      <div class="probbar-track" id="probBarTrack">
+        <div class="probbar-seg" id="probSegVoltar" style="background:var(--red);"></div>
+        <div class="probbar-seg" id="probSegManter" style="background:var(--muted);"></div>
+        <div class="probbar-seg" id="probSegAvancar" style="background:var(--green);"></div>
+      </div>
+      <div class="probbar-legend">
+        <span><span class="dot" style="background:var(--red);"></span> Voltar <b id="probPctVoltar">0%</b></span>
+        <span><span class="dot" style="background:var(--muted);"></span> Manter <b id="probPctManter">0%</b></span>
+        <span><span class="dot" style="background:var(--green);"></span> Avançar <b id="probPctAvancar">0%</b></span>
+      </div>
+    </div>
+
+    <div class="logsec">
+      <h2>Histórico de Alterações do Score (automático, nesta sessão)</h2>
+      <p style="color:var(--muted); font-size:12px; margin:0 0 10px;">
+        Toda vez que você muda um vetor, a variação atual ou o gap, o estado fica registrado aqui com o horário.
+        No fechamento, baixe o CSV e me envie — fica mais rápido e objetivo do que descrever tudo que aconteceu no período.
+      </p>
+      <div id="histEmpty" style="color:var(--muted); font-size:12.5px; padding:6px 0;">Nenhuma alteração registrada ainda.</div>
+      <div id="histResumo" style="display:none; font-size:12px; color:var(--muted); margin-bottom:8px;"></div>
+      <button class="exportBtn" onclick="exportarHistoricoCSV()">📥 Baixar Histórico de Alterações (CSV)</button>
+      <button class="exportBtn" onclick="limparHistorico()" style="margin-left:8px;">Limpar histórico</button>
+    </div>
+
+    <div class="logsec">
+      <h2>Registrar Encerramento da Sessão (Janela 09h–12h)</h2>
+      <div class="logform">
+        <input type="date" id="logData">
+        <input type="text" id="logReal" placeholder="Fechamento real (%)">
+        <input type="text" id="logObs" placeholder="Observação / contexto (armadilhas, eventos)">
+        <div></div>
+        <button onclick="salvarRegistro()">Salvar</button>
+      </div>
+      <div id="logEmpty">Nenhum registro ainda nesta sessão do navegador.</div>
+      <div id="logChart" style="display:none; margin-bottom:16px;"></div>
+      <table id="logTable" style="display:none;">
+        <thead><tr><th>Data</th><th>Score</th><th>Vetor</th><th>Atual no registro</th><th>Fechamento real</th><th>Obs.</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+      <button class="exportBtn" onclick="exportarCSV()">Exportar CSV</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PESOS = [
+  // --- Núcleo Doméstico ---
+  {nome:"DIs Futuros (DI27, 29, 31, 33)", peso:0.21, invertido:true, tipo:"numeric", categoria:"Núcleo Doméstico",
+    breakpoints:[0.10,0.50,1.00], placeholder:"ex: 0.35 ou -0.60",},
+  {nome:"Ações BR / Petrobrás (À Vista)", peso:0.18, invertido:false, tipo:"select", categoria:"Núcleo Doméstico",},
+  {nome:"6L (Futuro do Real - CME)", peso:0.15, invertido:false, tipo:"numeric", categoria:"Núcleo Doméstico",
+    breakpoints:[0.10,0.50], placeholder:"ex: 0.20 ou -0.15",},
+  {nome:"EWZ (ETF BR em NY)", peso:0.12, invertido:false, tipo:"numeric", categoria:"Núcleo Doméstico",
+    breakpoints:[0.10,0.50,1.50], placeholder:"ex: 0.80 ou -0.30",},
+  // --- ADRs & Agenda ---
+  {nome:"ADRs NY (PBR, VALE, ITUB, SID, GGB)", peso:0.08, invertido:false, tipo:"select", categoria:"ADRs & Agenda",},
+  {nome:"Dado Econômico (Agenda BR/EUA)", peso:0.08, invertido:false, tipo:"agenda", categoria:"ADRs & Agenda",},
+  // --- Câmbio & Juros Globais ---
+  {nome:"DXY (Índice Dólar Global)", peso:0.05, invertido:true, tipo:"numeric", categoria:"Câmbio & Juros Globais",
+    breakpoints:[0.10,0.50], placeholder:"ex: 0.20 ou -0.15",},
+  {nome:"Yields EUA (US 2/5/10/30Y)", peso:0.04, invertido:true, tipo:"numeric", categoria:"Câmbio & Juros Globais",
+    breakpoints:[0.10,0.50,1.00], placeholder:"ex: 0.30 ou -0.20",},
+  // --- Commodities & Risco Global ---
+  {nome:"Petróleo (Brent)", peso:0.03, invertido:false, tipo:"numeric", categoria:"Commodities & Risco Global",
+    breakpoints:[0.20,1.00,3.00], placeholder:"ex: 1.50 ou -0.80",},
+  {nome:"VIX (Volatilidade EUA)", peso:0.02, invertido:true, tipo:"numeric", categoria:"Commodities & Risco Global",
+    breakpoints:[0.20,1.00,3.00], placeholder:"ex: -10 ou 5",},
+  {nome:"BCOM (Commodities)", peso:0.02, invertido:false, tipo:"numeric", categoria:"Commodities & Risco Global",
+    breakpoints:[0.10,0.50,1.50], placeholder:"ex: 0.40 ou -0.20",},
+  {nome:"EEM (Emergentes)", peso:0.02, invertido:false, tipo:"numeric", categoria:"Commodities & Risco Global",
+    breakpoints:[0.10,0.50,1.50], placeholder:"ex: 0.40 ou -0.20",},
+];
+
+const OPCOES_SELECT = [
+  ["1.0","Forte Alta / Muito Bom"],
+  ["0.5","Leve Alta / Bom"],
+  ["0.0","Neutro / Em Linha"],
+  ["-0.5","Leve Baixa / Ruim"],
+  ["-1.0","Forte Baixa / Muito Ruim"],
+];
+const OPCOES_AGENDA = [
+  ["0","Agenda vazia"],
+  ["0.5","Dado bom (rotina)"],
+  ["-0.5","Dado ruim (rotina)"],
+  ["1","Evento discricionário forte positivo (Fed dovish, payroll fraco...)"],
+  ["-1","Evento discricionário forte negativo (Fed hawkish, payroll forte, fiscal...)"],
+];
+
+// Gera as opções do <select> de faixa a partir dos breakpoints do ativo,
+// da mais altista pra mais baixista, mostrando só o intervalo de % — sem rótulo qualitativo.
+function gerarOpcoesFaixa(breakpoints){
+  const fmt = (x) => x.toFixed(2).replace('.', ',') + '%';
+  if (breakpoints.length === 2){
+    const [n, f] = breakpoints;
+    return [
+      ["1", `Acima de +${fmt(f)}`],
+      ["0.5", `+${fmt(n)} a +${fmt(f)}`],
+      ["0", `-${fmt(n)} a +${fmt(n)}`],
+      ["-0.5", `-${fmt(n)} a -${fmt(f)}`],
+      ["-1", `Abaixo de -${fmt(f)}`],
+    ];
+  } else {
+    const [n, l, f] = breakpoints;
+    return [
+      ["1", `Acima de +${fmt(f)}`],
+      [(2/3).toFixed(4), `+${fmt(l)} a +${fmt(f)}`],
+      [(1/3).toFixed(4), `+${fmt(n)} a +${fmt(l)}`],
+      ["0", `-${fmt(n)} a +${fmt(n)}`],
+      [(-1/3).toFixed(4), `-${fmt(n)} a -${fmt(l)}`],
+      [(-2/3).toFixed(4), `-${fmt(l)} a -${fmt(f)}`],
+      ["-1", `Abaixo de -${fmt(f)}`],
+    ];
+  }
+}
+
+const fieldsDiv = document.getElementById('fields');
+let catAnterior = null;
+PESOS.forEach((p, i) => {
+  if (p.categoria !== catAnterior){
+    const h3 = document.createElement('h3');
+    h3.className = 'cat';
+    h3.textContent = p.categoria;
+    fieldsDiv.appendChild(h3);
+    catAnterior = p.categoria;
+  }
+  const div = document.createElement('div');
+  div.className = 'field';
+  div.id = 'field' + i;
+  if (p.tipo === 'numeric'){
+    const opts = gerarOpcoesFaixa(p.breakpoints).map(([v,l]) => `<option value="${v}" ${v==="0"?"selected":""}>${l}</option>`).join('');
+    div.innerHTML = `
+      <label>${p.nome} <span class="peso">(peso ${p.peso.toFixed(2)})</span></label>
+      <select id="v${i}" onchange="recalcular()">${opts}</select>
+    `;
+  } else if (p.tipo === 'select'){
+    const opts = OPCOES_SELECT.map(([v,l]) => `<option value="${v}" ${v==="0.0"?"selected":""}>${l}</option>`).join('');
+    div.innerHTML = `
+      <label>${p.nome} <span class="peso">(peso ${p.peso.toFixed(2)})</span></label>
+      <select id="v${i}" onchange="recalcular()">${opts}</select>
+    `;
+  } else if (p.tipo === 'agenda'){
+    const opts = OPCOES_AGENDA.map(([v,l]) => `<option value="${v}" ${v==="0"?"selected":""}>${l}</option>`).join('');
+    div.innerHTML = `
+      <label>${p.nome} <span class="peso">(peso ${p.peso.toFixed(2)})</span></label>
+      <select id="v${i}" onchange="recalcular()">${opts}</select>
+    `;
+  }
+  fieldsDiv.appendChild(div);
+});
+document.getElementById('variacaoAtual').addEventListener('input', recalcular);
+document.getElementById('gapAbertura').addEventListener('input', recalcular);
+
+const GAP_LIMIAR = 1.0;
+let regimeAnterior = null;
+let pendingLogTimer = null;
+const DEBOUNCE_LOG_MS = 1500;
+
+// Encontra o nível-chave mais próximo entre os patamares que você monitora manualmente.
+function nivelMaisProximo(v){
+  const niveis = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2];
+  let melhor = 0, menorDist = Infinity;
+  niveis.forEach(n => { const d = Math.abs(v-n); if (d < menorDist){ menorDist = d; melhor = n; } });
+  return melhor;
+}
+
+// Converte o score (-100 a +100) num "preço justo" contínuo em %, usando como âncoras
+// os mesmos cortes do regime (15/40/70/100 -> 0,50%/1,00%/1,50%/2,00%), interpolando entre eles.
+function scoreParaPrecoJusto(score){
+  const abs = Math.min(100, Math.abs(score));
+  const sinal = score >= 0 ? 1 : -1;
+  const eixoX = [0, 15, 40, 70, 100];
+  const eixoY = [0, 0.5, 1.0, 1.5, 2.0];
+  let y = eixoY[eixoY.length - 1];
+  for (let i = 0; i < eixoX.length - 1; i++){
+    if (abs >= eixoX[i] && abs <= eixoX[i+1]){
+      const t = (abs - eixoX[i]) / (eixoX[i+1] - eixoX[i]);
+      y = eixoY[i] + t * (eixoY[i+1] - eixoY[i]);
+      break;
+    }
+  }
+  return sinal * y;
+}
+
+// Calcula a probabilidade de o preço VOLTAR pro nível anterior, MANTER perto do nível
+// atual, ou AVANÇAR pro próximo nível, comparando a variação atual com o "preço justo"
+// que o score sustenta. Quanto mais o preço estiver além do preço justo, maior a chance
+// de voltar; quanto mais aquém, maior a chance de avançar; perto do justo, tende a manter.
+function calcularProbabilidades(variacaoAtual, scorePct){
+  const fair = scoreParaPrecoJusto(scorePct);
+  const diff = Math.abs(variacaoAtual) - Math.abs(fair); // >0: preço além do justo | <0: preço aquém do justo
+  const ratio = Math.max(-1, Math.min(1, diff / 0.5));
+  let probVoltar, probManter, probAvancar;
+  if (ratio >= 0){
+    probVoltar = 30 + 40*ratio;
+    probManter = 40 - 20*ratio;
+    probAvancar = 30 - 20*ratio;
+  } else {
+    const r = -ratio;
+    probAvancar = 30 + 40*r;
+    probManter = 40 - 20*r;
+    probVoltar = 30 - 20*r;
+  }
+  return {fair, probVoltar, probManter, probAvancar};
+}
+
+// Diagnóstico didático por nível: cruza o nível mais próximo do preço atual com o
+// alinhamento do núcleo doméstico (DI + Ações BR/Petrobrás + 6L + EWZ) e o regime do score.
+// As leituras por faixa vêm dos padrões já observados na base (armadilhas, alinhamento
+// total pra estender além de 1,5%, VIX/gap como limitadores) — ainda qualitativo, não
+// taxa de acerto formal. Vai virando mais preciso conforme mais dias forem registrados.
+// Detecta dia de ruído/chop: olha os últimos JANELA_MIN minutos do histórico de alterações
+// e verifica se o preço ficou batendo numa faixa estreita com várias reversões de direção —
+// o padrão que costuma gerar stops repetidos antes do movimento de verdade aparecer.
+const JANELA_RUIDO_MIN = 45;
+const AMPLITUDE_RUIDO_MAX = 0.6; // % — faixa considerada "estreita"
+const REVERSOES_RUIDO_MIN = 3;   // nº de mudanças de direção pra considerar ruído
+
+function detectarRuido(){
+  if (typeof historicoAlteracoes === 'undefined' || historicoAlteracoes.length < 5) return null;
+  const agora = Date.now();
+  const janela = historicoAlteracoes.filter(h => (agora - h.ts) <= JANELA_RUIDO_MIN*60*1000);
+  if (janela.length < 5) return null;
+
+  const vals = janela.map(h => h.atualNum);
+  const maxV = Math.max(...vals), minV = Math.min(...vals);
+  const amplitude = maxV - minV;
+
+  let reversoes = 0;
+  for (let i = 1; i < vals.length - 1; i++){
+    const d1 = vals[i] - vals[i-1], d2 = vals[i+1] - vals[i];
+    if ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) reversoes++;
+  }
+
+  if (reversoes >= REVERSOES_RUIDO_MIN && amplitude <= AMPLITUDE_RUIDO_MAX){
+    return {reversoes, amplitude, janelaMin: JANELA_RUIDO_MIN, minV, maxV};
+  }
+  return null;
+}
+
+// Detecta dia de expansão/alta volatilidade: o oposto do ruído — o preço anda rápido e
+// longe numa janela curta. Nesse regime o score tende a ficar defasado (muda de faixa aos
+// poucos enquanto o preço já reagiu de uma vez), então o risco é diferente do ruído: não é
+// "espere confirmação", é "não brigue com o movimento, mas desconfie da magnitude do score".
+const JANELA_EXPANSAO_MIN = 15;
+const AMPLITUDE_EXPANSAO_MIN = 1.0; // % — variação mínima na janela curta pra contar como expansão
+
+function detectarExpansao(){
+  if (typeof historicoAlteracoes === 'undefined' || historicoAlteracoes.length < 3) return null;
+  const agora = Date.now();
+  const janela = historicoAlteracoes.filter(h => (agora - h.ts) <= JANELA_EXPANSAO_MIN*60*1000);
+  if (janela.length < 3) return null;
+
+  const vals = janela.map(h => h.atualNum);
+  const maxV = Math.max(...vals), minV = Math.min(...vals);
+  const amplitude = maxV - minV;
+
+  if (amplitude >= AMPLITUDE_EXPANSAO_MIN){
+    return {amplitude, janelaMin: JANELA_EXPANSAO_MIN, minV, maxV};
+  }
+  return null;
+}
+
+// Estima, de forma qualitativa, a chance do PRÓPRIO WIN chegar na faixa Forte (±1,50%+)
+// hoje — pela distância (em nº de faixas de 0,50%) entre o nível atual do preço e essa
+// faixa. Não é taxa de acerto real, é heurística — igual ao resto do painel de
+// probabilidade, até termos amostra suficiente na aba Diagnostico_Niveis.
+function probabilidadeWinForte(variacaoAtual){
+  const nivelAtual = Math.abs(nivelMaisProximo(variacaoAtual));
+  if (nivelAtual >= 1.5){
+    return {texto: `WIN já está na própria faixa Forte (±1,50% ou além).`};
+  }
+  const distancia = Math.max(1, Math.round((1.5 - nivelAtual) / 0.5));
+  const bandas = { 1: "50 a 60%", 2: "20 a 30%", 3: "abaixo de 10%" };
+  const banda = bandas[distancia] || "abaixo de 10%";
+  const texto = `WIN está a ${distancia} faixa${distancia>1?'s':''} de 0,50% do nível Forte (±1,50%). `+
+    `Chance estimada de chegar lá hoje: ${banda} — sem um evento novo ou o score reforçar bastante, tende a não confirmar.`;
+  return {texto, banda};
+}
+
+// Antecipador de giro do score: o score tem defasagem. Aqui se acompanha a contribuição do NÚCLEO
+// (DI, Ações BR, 6L, EWZ — os pesos de maior impacto, ~66% do total): se ela perdeu sustentação
+// (>= GIRO_NUCLEO_QUEDA_MIN pontos em GIRO_JANELA_MIN min) enquanto o score total AINDA aponta a
+// direção antiga, o score tende a virar logo — antes de esperar o preço confirmar tudo.
+// Backtest nos CSVs de 29/09 a 09/10 (11 episódios, amostra pequena): o score deixou a direção em
+// até 45 min em 8/11 casos (~73%) contra ~34% de base; preço >= 0,5% contra a direção em ~45% (base ~33%).
+// (Uma 1ª versão exigia que o score "não acompanhasse" a queda do núcleo, mas nos dados reais ele
+// acompanha quase sempre — por isso nunca disparava.)
+const GIRO_JANELA_MIN = 30;       // janela de comparação (minutos)
+const GIRO_NUCLEO_QUEDA_MIN = 10; // queda mínima da contribuição do núcleo (pontos de score)
+const GIRO_PASSO_VARIAVEL = 0.33; // queda mínima de uma variável (≈ 1 faixa) pra contar como "virou"
+
+function detectarGiroScore(scorePct, nucleoPtsAtual, valoresNucleoAtual){
+  if (typeof historicoAlteracoes === 'undefined') return null;
+  const d = scorePct >= 15 ? 1 : (scorePct <= -15 ? -1 : 0);
+  if (d === 0) return null; // sem direção definida no score não há "contrário" a antecipar
+
+  const agora = Date.now();
+  const janela = historicoAlteracoes.filter(h =>
+    (agora - h.ts) <= GIRO_JANELA_MIN*60*1000 && Array.isArray(h.nucleoVals) && h.nucleoVals.length === valoresNucleoAtual.length);
+  if (janela.length < 2) return null;
+
+  const extremo = (arr) => d > 0 ? Math.max(...arr) : Math.min(...arr);
+  const queda = (ref, atual) => d > 0 ? (ref - atual) : (atual - ref); // >0 = perdeu força na direção do score
+
+  const ptsNucleo = janela.map(h => h.nucleoPts).concat([nucleoPtsAtual]);
+  const scores = janela.map(h => h.scoreNum).concat([scorePct]);
+  const quedaNucleo = queda(extremo(ptsNucleo), nucleoPtsAtual);
+  const quedaScore = queda(extremo(scores), scorePct);
+
+  if (quedaNucleo < GIRO_NUCLEO_QUEDA_MIN) return null;
+
+  const nomesCurtos = PESOS.slice(0, valoresNucleoAtual.length).map(p => p.nome.split(' (')[0].split(' / ')[0]);
+  const viraram = [];
+  valoresNucleoAtual.forEach((vAtual, i) => {
+    const serie = janela.map(h => h.nucleoVals[i]).concat([vAtual]);
+    if (queda(extremo(serie), vAtual) >= GIRO_PASSO_VARIAVEL) viraram.push(nomesCurtos[i]);
+  });
+
+  return {
+    direcaoScore: d > 0 ? 'alta' : 'baixa',
+    movimentoContrario: d > 0 ? 'queda' : 'alta',
+    quedaNucleo, quedaScore, viraram, janelaMin: GIRO_JANELA_MIN,
+    nucleoDe: extremo(ptsNucleo), nucleoPara: nucleoPtsAtual,
+  };
+}
+
+function diagnosticarNivel(variacaoAtual, scorePct, alinhado, direcaoNucleo){
+  const nivel = nivelMaisProximo(variacaoAtual);
+  const absNivel = Math.abs(nivel);
+  const dirTxt = nivel > 0 ? "alta" : (nivel < 0 ? "baixa" : "neutro");
+
+  let diag = `📍 Nível de referência mais próximo: ${nivel>=0?'+':''}${nivel.toFixed(2)}%. `;
+
+  if (absNivel === 0){
+    diag += `Região de indefinição — nesse patamar, historicamente vale mais esperar a abertura do mercado americano ou um dado de agenda definir o tom do que operar pela leitura estática do score.`;
+  } else {
+    diag += alinhado
+      ? `Núcleo doméstico (DI, Ações BR/Petrobrás, 6L, EWZ) está alinhado em ${direcaoNucleo} — essa é a condição que, na base, precede os dias que estenderam além de 1,5%.`
+      : `Núcleo doméstico NÃO está totalmente alinhado — sem essa confirmação, o histórico mostra o movimento tendendo a ficar contido perto de 1% e com mais chance de corrigir do que estender.`;
+
+    if (absNivel >= 2){
+      diag += alinhado
+        ? ` Em ±2% com alinhamento, o movimento tende a ser genuíno — ainda assim, fique de olho em sinais de exaustão (RSI, volume, delta) antes de perseguir o extremo.`
+        : ` Em ±2% sem alinhamento total, desconfie — é candidato forte a correção ou pelo menos consolidação a partir daqui.`;
+    } else if (absNivel >= 1.5){
+      diag += ` A faixa de ±1,5% costuma ser o ponto de decisão: com score forte e alinhado tende a esticar até ±2%; sem isso, tende a devolver de volta pra perto de ±1%.`;
+    } else if (absNivel >= 1){
+      diag += ` Em ±1%, esse costuma ser o teto quando falta alinhamento total — vale observar se DI e real ainda têm força pra continuar ou se começam a divergir (sinal de correção próxima).`;
+    } else {
+      diag += ` Em ±0,50%, ainda é cedo pra saber se é direcional ou lateral — cheque o gap de abertura e se o delta/fluxo acumulado confirma o movimento antes de aumentar convicção.`;
+    }
+  }
+  return diag;
+}
+
+function classificarRegime(score){
+  if (score >= 70) return {nome:"Forte Alta", emoji:"🟢🟢", faixa:"acima de +1,50%", lo:1.5, hi:Infinity,
+    dica:"viés forte pra cima — mas confirme com fluxo (delta acumulado/saldo financeiro) antes de perseguir o extremo; dias de euforia sem esse lastro tendem a devolver tudo (ver 02/10)."};
+  if (score >= 40) return {nome:"Média Alta", emoji:"🟢🟢", faixa:"+1,00% a +1,50%", lo:1.0, hi:1.5,
+    dica:"tendência de alta já consolidada, ainda não no extremo — favorece operar a favor do fluxo, de olho em sinais de esgotamento antes de 1,50%."};
+  if (score >= 15) return {nome:"Leve Alta", emoji:"🟢", faixa:"+0,50% a +1,00%", lo:0.5, hi:1.0,
+    dica:"viés de alta moderado, ainda com pouco sustento — cuidado com posições maiores sem reforço adicional do combo."};
+  if (score > -15) return {nome:"Neutro", emoji:"⚪", faixa:"-0,50% a +0,50%", lo:0, hi:0.5,
+    dica:"sem direção estatística clara — favorece ficar de fora ou operar o range, não force direção aqui."};
+  if (score > -40) return {nome:"Leve Baixa", emoji:"🔴", faixa:"-0,50% a -1,00%", lo:0.5, hi:1.0,
+    dica:"viés de baixa moderado, ainda com pouco sustento — cuidado com posições maiores sem reforço adicional do combo."};
+  if (score > -70) return {nome:"Média Baixa", emoji:"🔴🔴", faixa:"-1,00% a -1,50%", lo:1.0, hi:1.5,
+    dica:"tendência de baixa já consolidada, ainda não no extremo — favorece operar a favor do fluxo, de olho em sinais de esgotamento antes de -1,50%."};
+  return {nome:"Forte Baixa", emoji:"🔴🔴", faixa:"abaixo de -1,50%", lo:1.5, hi:Infinity,
+    dica:"viés forte pra baixo — mas confirme com fluxo (delta acumulado/saldo financeiro) antes de perseguir o extremo; dias de pânico sem esse lastro também podem reverter rápido."};
+}
+function viesScore(score){ if (score>=15) return "compra"; if (score<=-15) return "venda"; return "neutro"; }
+function viesAtual(v, limiar=0.10){ if (v>limiar) return "compra"; if (v<-limiar) return "venda"; return "neutro"; }
+
+function recalcular(){
+  let scoreTotal = 0, maiorContrib = 0, vetorPrincipal = "Nenhum", maiorIdx = -1;
+  const niveisNucleo = [];
+  PESOS.forEach((p, i) => {
+    const nivel = parseFloat(document.getElementById('v'+i).value);
+    const valor = p.invertido ? -nivel : nivel;
+    const contrib = valor * p.peso;
+    scoreTotal += contrib;
+    if (Math.abs(contrib) > Math.abs(maiorContrib)) { maiorContrib = contrib; vetorPrincipal = p.nome; maiorIdx = i; }
+    if (i <= 3) niveisNucleo.push(valor); // 0-3 = Núcleo Doméstico (DI, Ações BR, 6L, EWZ), já no sentido "favorável ao WIN"
+
+    // Pinta a borda do select conforme o nível escolhido (positivo/negativo/neutro)
+    const selEl = document.getElementById('v'+i);
+    selEl.classList.remove('pos','neg');
+    if (nivel > 0) selEl.classList.add('pos');
+    else if (nivel < 0) selEl.classList.add('neg');
+  });
+
+  // Alinhamento do núcleo: todas as 4 variáveis favoráveis no mesmo sentido (nenhuma neutra ou contrária)
+  const nucleoPos = niveisNucleo.filter(v => v > 0).length;
+  const nucleoNeg = niveisNucleo.filter(v => v < 0).length;
+  const alinhado = (nucleoPos === 4) || (nucleoNeg === 4);
+  const direcaoNucleo = nucleoPos === 4 ? "alta" : (nucleoNeg === 4 ? "baixa" : "—");
+
+  // Contribuição ponderada do núcleo doméstico (DI, Ações BR, 6L, EWZ) em pontos de score, já no sentido favorável ao WIN.
+  const nucleoPts = niveisNucleo.reduce((acc, v, i) => acc + v * PESOS[i].peso * 100, 0);
+
+  const alinhamentoEl = document.getElementById('alinhamentoVal');
+  if (alinhado){
+    alinhamentoEl.textContent = direcaoNucleo === "alta" ? "✅ Alinhado (alta)" : "✅ Alinhado (baixa)";
+    alinhamentoEl.style.color = direcaoNucleo === "alta" ? "var(--green)" : "var(--red)";
+  } else {
+    alinhamentoEl.textContent = "❌ Não alinhado";
+    alinhamentoEl.style.color = "var(--muted)";
+  }
+
+  // Destaca o campo do vetor principal na sidebar
+  PESOS.forEach((p, i) => {
+    document.getElementById('field'+i).classList.toggle('principal', i === maiorIdx);
+  });
+
+  const scorePct = scoreTotal * 100;
+  const variacaoAtual = parseFloat(document.getElementById('variacaoAtual').value) || 0;
+
+  document.getElementById('scoreVal').textContent = scorePct.toFixed(1) + '%';
+  document.getElementById('vetorVal').textContent = vetorPrincipal;
+  const atualEl = document.getElementById('atualVal');
+  atualEl.textContent = (variacaoAtual>=0?'+':'') + variacaoAtual.toFixed(2) + '%';
+  atualEl.className = 'val ' + (variacaoAtual>0.10?'pos':variacaoAtual<-0.10?'neg':'zero');
+
+  // Move o marcador da barra de score (-100 a +100 -> 0% a 100% de left)
+  const clampedScore = Math.max(-100, Math.min(100, scorePct));
+  document.getElementById('scoreMarker').style.left = ((clampedScore + 100) / 200 * 100) + '%';
+
+  const regime = classificarRegime(scorePct);
+  const biasScore = viesScore(scorePct);
+  const biasAtual = viesAtual(variacaoAtual);
+
+  let texto, cls;
+  if (biasScore==="neutro" && biasAtual==="neutro"){
+    texto = "Score e variação atual sem direção clara — sem viés estatístico para operar a favor nem contra. Aguardar mais confirmação de fluxo.";
+    cls = "";
+  } else if (biasScore==="neutro" && biasAtual!=="neutro"){
+    texto = `O WIN já se moveu para ${biasAtual} (${variacaoAtual>=0?'+':''}${variacaoAtual.toFixed(2)}%) sem suporte estatístico claro no score. Possível movimento técnico isolado ou armadilha inicial — evitar entrar a favor do movimento sem confirmação adicional (ex: alinhamento de DI + real + ações BR).`;
+    cls = "warnbox";
+  } else if (biasScore===biasAtual){
+    texto = `Variação atual (${variacaoAtual>=0?'+':''}${variacaoAtual.toFixed(2)}%) CONFIRMA o viés dominante de ${biasScore.toUpperCase()}. Cenário favorável para operar A FAVOR do fluxo — vetor principal: ${vetorPrincipal}.`;
+    const absAtual = Math.abs(variacaoAtual);
+    if (absAtual > regime.hi){
+      texto += ` Atenção: o preço já foi além da faixa que esse score sustenta (${regime.lo.toFixed(2)}% a ${regime.hi===Infinity?'∞':regime.hi.toFixed(2)+'%'}) — a partir daqui favorece CORREÇÃO, não continuidade. Comece a olhar para realização/reversão parcial.`;
+    } else if (absAtual < regime.lo){
+      texto += ` O score sustentaria ida até a faixa de ${regime.lo.toFixed(2)}% a ${regime.hi===Infinity?'∞':regime.hi.toFixed(2)+'%'}, e o preço ainda não confirmou toda essa extensão — pode haver espaço pra continuar na mesma direção.`;
+    } else {
+      texto += ` O preço está dentro da faixa que o score sustenta (${regime.lo.toFixed(2)}% a ${regime.hi===Infinity?'∞':regime.hi.toFixed(2)+'%'}) — leitura de continuidade, sem sinal de esticado ainda.`;
+    }
+    cls = "ok";
+  } else {
+    texto = `ATENÇÃO: variação atual (${variacaoAtual>=0?'+':''}${variacaoAtual.toFixed(2)}%) está CONTRÁRIA ao viés dominante de ${biasScore.toUpperCase()}. Padrão clássico de armadilha (rompimentos falsos, dias de absorção). Evitar operar na direção atual do preço até o score confirmar — e evitar operar contra o score sem uma reversão clara e sustentada do fluxo.`;
+    cls = "warnbox";
+  }
+  const gap = parseFloat(document.getElementById('gapAbertura').value) || 0;
+
+  // Agenda o registro no histórico com um pequeno atraso (debounce): se você estiver
+  // arrastando o seletor até achar o valor certo, cada posição intermediária NÃO vira uma
+  // entrada separada no log — só a última, depois de ~1,5s sem nova mudança, é gravada.
+  // Isso evita "toques" falsos de nível e reversões espúrias nos detectores de ruído/expansão.
+  clearTimeout(pendingLogTimer);
+  pendingLogTimer = setTimeout(() => {
+    registrarHistorico(scorePct, regime, vetorPrincipal, variacaoAtual, gap, alinhado, direcaoNucleo, niveisNucleo.slice(), nucleoPts);
+  }, DEBOUNCE_LOG_MS);
+
+  // Ruído/expansão são lidos do histórico JÁ CONSOLIDADO (sem incluir o valor em trânsito
+  // agora) — reflete o padrão real de mercado, não o movimento do seu cursor no seletor.
+  const ruido = detectarRuido();
+  const expansao = detectarExpansao();
+  const giro = detectarGiroScore(scorePct, nucleoPts, niveisNucleo);
+
+  // Item 4: linguagem de risco automática — quando o dia está em ruído ou expansão, o
+  // texto principal passa a recomendar explicitamente cautela operacional, em vez de
+  // aplicar a leitura normal como se fosse um dia comportado.
+  if (ruido){
+    texto += ` ⚠️ Dia com padrão de ruído/chop no momento — considere reduzir o tamanho da posição ou esperar estrutura mais clara antes de entrar, em vez de tentar a cada repique.`;
+  }
+  if (expansao){
+    texto += ` ⚡ Dia com expansão de volatilidade no momento — o score tende a ficar defasado em relação ao preço aqui; não brigue com o movimento, mas desconfie da magnitude exata que o score sozinho sugere, e considere stops mais largos.`;
+  }
+
+  if (giro){
+    texto += ` 🔄 O núcleo (${giro.viraram.join(', ') || 'pesos de maior impacto'}) já está virando contra o score — possível início de ${giro.movimentoContrario} antes do score confirmar; cuidado com entradas a favor da pontuação atual.`;
+  }
+
+  document.getElementById('regimeTxt').innerHTML =
+    `${regime.emoji} Regime: ${regime.nome} (${regime.faixa})<br><span style="font-weight:400; font-size:12.5px; color:var(--text);">${regime.dica}</span>`;
+  document.getElementById('guiaTxt').textContent = texto;
+  const box = document.getElementById('guiaBox');
+  box.className = 'guia' + (cls ? ' '+cls : '');
+
+  if (regimeAnterior !== null && regimeAnterior !== regime.nome){
+    document.querySelector('.metrics4').classList.remove('pulso');
+    // força reflow pra reiniciar a animação mesmo se já tiver rodado antes
+    void document.querySelector('.metrics4').offsetWidth;
+    document.querySelector('.metrics4').classList.add('pulso');
+  }
+  regimeAnterior = regime.nome;
+
+  document.getElementById('diagTxt').textContent = diagnosticarNivel(variacaoAtual, scorePct, alinhado, direcaoNucleo);
+
+  const probForte = probabilidadeWinForte(variacaoAtual);
+  document.getElementById('forteTxt').textContent = probForte ? `📊 ${probForte.texto}` : '';
+
+  // ---------------- Probabilidade Estatística ----------------
+  const nivelAtualProb = nivelMaisProximo(variacaoAtual);
+  const probs = calcularProbabilidades(variacaoAtual, scorePct);
+  // Quando o preço está exatamente em 0%, não há lado óbvio pra "avançar" — nesse caso,
+  // segue o sinal do preço justo que o score sustenta, em vez de assumir o lado positivo
+  // por padrão (isso causava o painel dizer "X% de chance de avançar para +0,50%" mesmo
+  // com o score sustentando um preço justo negativo, o que não fazia sentido).
+  const sinalProb = variacaoAtual > 0 ? 1 : (variacaoAtual < 0 ? -1 : (probs.fair !== 0 ? Math.sign(probs.fair) : 1));
+  const nivelAnteriorProb = (nivelAtualProb - 0.5*sinalProb);
+  const nivelSeguinteProb = (nivelAtualProb + 0.5*sinalProb);
+
+  document.getElementById('probTxt').textContent =
+    `Nível atual mais próximo: ${nivelAtualProb>=0?'+':''}${nivelAtualProb.toFixed(2)}%. Score sustenta um preço justo estimado de ${probs.fair>=0?'+':''}${probs.fair.toFixed(2)}%. `+
+    `Com base nessa relação: ${probs.probVoltar.toFixed(0)}% de chance de voltar para ${nivelAnteriorProb>=0?'+':''}${nivelAnteriorProb.toFixed(2)}%, `+
+    `${probs.probManter.toFixed(0)}% de manter perto de ${nivelAtualProb>=0?'+':''}${nivelAtualProb.toFixed(2)}%, `+
+    `${probs.probAvancar.toFixed(0)}% de avançar para ${nivelSeguinteProb>=0?'+':''}${nivelSeguinteProb.toFixed(2)}%.`;
+
+  document.getElementById('probSegVoltar').style.width = probs.probVoltar + '%';
+  document.getElementById('probSegManter').style.width = probs.probManter + '%';
+  document.getElementById('probSegAvancar').style.width = probs.probAvancar + '%';
+  document.getElementById('probPctVoltar').textContent = probs.probVoltar.toFixed(0) + '%';
+  document.getElementById('probPctManter').textContent = probs.probManter.toFixed(0) + '%';
+  document.getElementById('probPctAvancar').textContent = probs.probAvancar.toFixed(0) + '%';
+
+  document.querySelectorAll('#refTable tbody tr').forEach(tr => {
+    const min = parseFloat(tr.dataset.min), max = parseFloat(tr.dataset.max);
+    tr.classList.toggle('ativa', scorePct >= min && scorePct < max);
+  });
+
+  const gapBox = document.getElementById('gapBox');
+  if (Math.abs(gap) >= GAP_LIMIAR){
+    gapBox.style.display = 'block';
+    gapBox.className = 'guia warnbox';
+    document.getElementById('gapTitle').textContent = `🕳️ Gap de abertura amplo: ${gap>=0?'+':''}${gap.toFixed(2)}%`;
+    document.getElementById('gapTxt').textContent =
+      `Gaps desse tamanho (≥ ${GAP_LIMIAR.toFixed(2)}%) tendem a corrigir antes de continuar — o WIN costuma devolver parte do movimento até testar uma referência (média 9, média 20 ou VWAP) antes de decidir a direção de verdade. Score atual: ${scorePct.toFixed(1)}% (${regime.nome}). `+
+      (Math.abs(scorePct) >= 70
+        ? `Como o score já está extremo e alinhado com o gap, há alguma força pra sustentar — mas ainda assim vale esperar o teste da referência antes de perseguir.`
+        : `Como o score ainda não está extremo, o gap tem menos força fundamentalista por trás — favorece esperar a correção/teste da referência em vez de perseguir na abertura.`);
+  } else {
+    gapBox.style.display = 'none';
+  }
+
+  // ---------------- Alerta de ruído/chop ----------------
+  const ruidoBox = document.getElementById('ruidoBox');
+  if (ruido){
+    ruidoBox.style.display = 'block';
+    ruidoBox.className = 'guia warnbox';
+    document.getElementById('ruidoTitle').textContent = `🌊 Padrão de ruído/chop detectado`;
+    document.getElementById('ruidoTxt').textContent =
+      `Nos últimos ${ruido.janelaMin} min, o WIN oscilou ${ruido.reversoes}x de direção dentro de uma faixa estreita `+
+      `(${ruido.minV.toFixed(2)}% a ${ruido.maxV.toFixed(2)}%, amplitude de ${ruido.amplitude.toFixed(2)}%). `+
+      `Esse é o padrão que costuma gerar stops repetidos antes do movimento de verdade aparecer — em vez de tentar `+
+      `entrar a cada nova tentativa, considere esperar uma confirmação mais forte (alinhamento total do núcleo + `+
+      `score saindo da faixa Neutro/Leve) antes de se posicionar, ou reduzir o tamanho da posição enquanto durar esse padrão.`;
+  } else {
+    ruidoBox.style.display = 'none';
+  }
+
+  // ---------------- Alerta de expansão/alta volatilidade ----------------
+  const expansaoBox = document.getElementById('expansaoBox');
+  if (expansao){
+    expansaoBox.style.display = 'block';
+    expansaoBox.className = 'guia warnbox';
+    document.getElementById('expansaoTitle').textContent = `⚡ Expansão de volatilidade detectada`;
+    document.getElementById('expansaoTxt').textContent =
+      `Nos últimos ${expansao.janelaMin} min, o WIN se moveu ${expansao.amplitude.toFixed(2)}% `+
+      `(${expansao.minV.toFixed(2)}% a ${expansao.maxV.toFixed(2)}%) — movimento rápido e amplo. `+
+      `Nesse regime o score tende a ficar defasado em relação ao preço, porque cada variável muda de faixa aos poucos `+
+      `enquanto o preço já reagiu de uma vez. Não é sinal pra brigar contra o movimento, mas vale desconfiar da `+
+      `magnitude exata que o score sozinho sugere nesse momento — considere spreads/stops mais largos e reduza o `+
+      `tamanho da posição até o ritmo normalizar.`;
+  } else {
+    expansaoBox.style.display = 'none';
+  }
+
+  // ---------------- Antecipador de giro do score ----------------
+  const giroBox = document.getElementById('giroBox');
+  if (giro){
+    giroBox.style.display = 'block';
+    giroBox.className = 'guia warnbox';
+    document.getElementById('giroTitle').textContent = `🔄 Possível giro do score em formação`;
+    document.getElementById('giroTxt').textContent =
+      `O score ainda aponta ${giro.direcaoScore}, mas nos últimos ${giro.janelaMin} min o núcleo doméstico perdeu ${giro.quedaNucleo.toFixed(0)} pontos de sustentação `+
+      `(de ${giro.nucleoDe.toFixed(0)} para ${giro.nucleoPara.toFixed(0)}); o score total recuou ${Math.max(0, giro.quedaScore).toFixed(0)} e tende a acompanhar. `+
+      `Variáveis que já viraram: ${giro.viraram.join(', ') || 'várias, em pequena intensidade'}. `+
+      `Sinal de possível início de movimento contrário à pontuação (${giro.movimentoContrario}): em vez de esperar o score e o preço confirmarem tudo, `+
+      `considere evitar novas entradas a favor do score agora e conferir o fluxo (delta/saldo financeiro) e a reação do preço nos níveis-chave.`;
+  } else {
+    giroBox.style.display = 'none';
+  }
+}
+
+// ---------------- Histórico automático de alterações (timestamped) ----------------
+const historicoAlteracoes = [];
+let ultimaChaveHistorico = null;
+
+// Registros manuais de encerramento da sessão.
+const registros = [];
+
+function registrarHistorico(scorePct, regime, vetorPrincipal, variacaoAtual, gap, alinhado, direcaoNucleo, nucleoVals = [], nucleoPts = 0){
+  // Captura o rótulo selecionado em cada uma das 12 variáveis no momento atual.
+  const estadoVariaveis = {};
+  PESOS.forEach((p, i) => {
+    const el = document.getElementById('v'+i);
+    estadoVariaveis[p.nome] = (el && el.options && el.selectedIndex >= 0) ? el.options[el.selectedIndex].text : '';
+  });
+
+  // Ignora a chamada inicial (antes de qualquer interação) e evita duplicar entradas idênticas seguidas.
+  const chave = JSON.stringify([estadoVariaveis, variacaoAtual.toFixed(2), gap.toFixed(2)]);
+  if (chave === ultimaChaveHistorico) return;
+  const primeira = ultimaChaveHistorico === null;
+  ultimaChaveHistorico = chave;
+  if (primeira) return; // não loga o estado neutro inicial da página
+
+  const hora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  historicoAlteracoes.push({
+    hora, ts: Date.now(), score: scorePct.toFixed(1), regime: regime.nome, vetor: vetorPrincipal,
+    atual: variacaoAtual.toFixed(2), atualNum: variacaoAtual, gap: gap.toFixed(2),
+    alinhamento: alinhado ? `Alinhado (${direcaoNucleo})` : "Não alinhado",
+    variaveis: estadoVariaveis,
+    scoreNum: scorePct, nucleoVals, nucleoPts,
+  });
+
+  const empty = document.getElementById('histEmpty');
+  const resumo = document.getElementById('histResumo');
+  if (empty) empty.style.display = 'none';
+  if (resumo){
+    resumo.style.display = 'block';
+    const ultimo = historicoAlteracoes[historicoAlteracoes.length - 1];
+    resumo.textContent = `${historicoAlteracoes.length} alterações registradas — última às ${ultimo.hora} (score ${ultimo.score}%, ${ultimo.regime}).`;
+  }
+}
+
+function csvCampo(valor){
+  const texto = String(valor ?? '');
+  return `"${texto.replace(/"/g, '""')}"`;
+}
+
+function baixarCSV(conteudo, nomeArquivo){
+  const blob = new Blob(['\uFEFF', conteudo], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportarHistoricoCSV(){
+  if (!historicoAlteracoes.length){ alert('Nenhuma alteração registrada ainda nesta sessão.'); return; }
+  const nomesVariaveis = PESOS.map(p => p.nome);
+  const header = ['Hora','Score(%)','Regime','VetorPrincipal','VariacaoAtual(%)','Gap(%)','AlinhamentoNucleo', ...nomesVariaveis, 'ScoreNucleo(pts)']
+    .map(csvCampo).join(',') + '\n';
+  const rows = historicoAlteracoes.map(h => [
+    h.hora, h.score, h.regime, h.vetor, h.atual, h.gap, h.alinhamento,
+    ...nomesVariaveis.map(n => h.variaveis[n]),
+    (h.nucleoPts ?? 0).toFixed(1)
+  ].map(csvCampo).join(',')).join('\n');
+  const agora = new Date();
+  const dataStr = agora.toISOString().slice(0,10);
+  baixarCSV(header + rows + '\n', `historico_alteracoes_win_${dataStr}.csv`);
+}
+
+function limparHistorico(){
+  if (!historicoAlteracoes.length){ return; }
+  if (!confirm('Limpar todo o histórico de alterações desta sessão? Essa ação não pode ser desfeita.')) return;
+  historicoAlteracoes.length = 0;
+  ultimaChaveHistorico = null;
+  document.getElementById('histEmpty').style.display = 'block';
+  document.getElementById('histResumo').style.display = 'none';
+}
+function escapeHtml(valor){
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function salvarRegistro(){
+  const data = document.getElementById('logData').value || new Date().toISOString().slice(0,10);
+  const real = document.getElementById('logReal').value;
+  const obs = document.getElementById('logObs').value;
+  const score = document.getElementById('scoreVal').textContent;
+  const vetor = document.getElementById('vetorVal').textContent;
+  const atual = document.getElementById('atualVal').textContent;
+  registros.push({data, score, vetor, atual, real, obs});
+  renderLog();
+  document.getElementById('logReal').value = '';
+  document.getElementById('logObs').value = '';
+}
+function renderLog(){
+  const body = document.getElementById('logBody');
+  body.innerHTML = registros.map(r =>
+    `<tr><td>${escapeHtml(r.data)}</td><td>${escapeHtml(r.score)}</td><td>${escapeHtml(r.vetor)}</td><td>${escapeHtml(r.atual)}</td><td>${escapeHtml(r.real)}</td><td>${escapeHtml(r.obs)}</td></tr>`
+  ).join('');
+  document.getElementById('logEmpty').style.display = registros.length ? 'none' : 'block';
+  document.getElementById('logTable').style.display = registros.length ? 'table' : 'none';
+
+  const chartEl = document.getElementById('logChart');
+  if (!registros.length){ chartEl.style.display = 'none'; return; }
+  chartEl.style.display = 'block';
+  chartEl.innerHTML = registros.map(r => {
+    const scoreNum = Math.max(-100, Math.min(100, parseFloat(r.score) || 0));
+    const largura = Math.abs(scoreNum) / 100 * 50;
+    const classe = scoreNum >= 0 ? 'pos' : 'neg';
+    const estilo = `width:${largura}%;`;
+    const cor = scoreNum >= 0 ? 'var(--green)' : 'var(--red)';
+    return `
+      <div class="barrow">
+        <span class="barlbl">${escapeHtml(r.data)}</span>
+        <div class="bartrack"><div class="barmid"></div><div class="barfill ${classe}" style="${estilo}"></div></div>
+        <span class="barval" style="color:${cor}">${scoreNum.toFixed(0)}%</span>
+      </div>`;
+  }).join('');
+}
+function exportarCSV(){
+  if (!registros.length){ alert('Nenhum registro para exportar ainda.'); return; }
+  const header = ['Data','Score','Vetor','VariacaoAtual','FechamentoReal','Observacao']
+    .map(csvCampo).join(',') + '\n';
+  const rows = registros.map(r => [
+    r.data, r.score, r.vetor, r.atual, r.real, r.obs
+  ].map(csvCampo).join(',')).join('\n');
+  baixarCSV(header + rows + '\n', 'historico_win.csv');
+}
+
+
+// ---------------- Controle por voz (Web Speech API, sem chave de API) ----------------
+let voiceRecognition = null;
+let voiceListening = false;
+
+function vozStatus(msg, tipo=''){
+  const el = document.getElementById('voiceStatus');
+  el.textContent = msg;
+  el.className = 'voice-status' + (tipo ? ' ' + tipo : '');
+}
+function normalizarVoz(t){
+  return String(t || '').toLocaleLowerCase('pt-BR')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[.,;:!?]/g,' ').replace(/\s+/g,' ').trim();
+}
+function falar(texto){
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'pt-BR'; u.rate = 1.03;
+  window.speechSynthesis.speak(u);
+}
+function pararVoz(){
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (voiceRecognition && voiceListening) { try { voiceRecognition.stop(); } catch(e){} }
+}
+function iniciarVoz(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){
+    vozStatus('Este navegador não disponibiliza reconhecimento de voz. Abra no Chrome atualizado.', 'err');
+    return;
+  }
+  // Diagnóstico explícito: o reconhecimento de voz precisa de uma origem compatível.
+  // Abrir o HTML como arquivo local pode impedir a autorização, mesmo com a permissão geral do Android ativa.
+  const protocolo = window.location && window.location.protocol;
+  const origemLocal = protocolo === 'file:';
+  const origemInsegura = protocolo !== 'https:' && protocolo !== 'http:' && protocolo !== 'file:';
+  if (origemLocal || origemInsegura){
+    vozStatus('O escore está aberto como arquivo local. Para usar o microfone, abra esta página por um endereço HTTPS; a permissão do Android pode estar ativada e ainda assim o navegador bloquear o reconhecimento.', 'err');
+    return;
+  }
+  if (voiceRecognition && voiceListening) { try { voiceRecognition.stop(); } catch(e){} }
+  voiceRecognition = new SR();
+  voiceRecognition.lang = 'pt-BR';
+  voiceRecognition.continuous = false;
+  voiceRecognition.interimResults = false;
+  voiceRecognition.maxAlternatives = 3;
+  voiceListening = true;
+  document.getElementById('voiceStart').disabled = true;
+  document.getElementById('voiceTranscript').textContent = '';
+  vozStatus('Ouvindo… diga um comando curto.', '');
+  voiceRecognition.onresult = (event) => {
+    const result = event.results[event.results.length - 1];
+    const transcript = Array.from(result).map(x => x.transcript).join(' ');
+    document.getElementById('voiceTranscript').textContent = 'Reconhecido: “' + transcript + '”';
+    const resposta = interpretarComandoVoz(transcript);
+    vozStatus(resposta.mensagem, resposta.ok ? 'ok' : 'err');
+    if (resposta.ok) falar(resposta.fala || resposta.mensagem);
+  };
+  voiceRecognition.onerror = (event) => {
+    const msgs = { 'not-allowed':'O navegador recusou o reconhecimento de voz (not-allowed). Verifique a permissão do site e, se o HTML foi aberto como arquivo baixado, publique/abra o escore por HTTPS.',
+      'no-speech':'Não detectei fala. Toque e tente novamente.', 'network':'Falha no serviço de reconhecimento. Verifique a conexão.',
+      'audio-capture':'Não encontrei um microfone disponível.' };
+    vozStatus(msgs[event.error] || ('Erro de reconhecimento: ' + event.error), 'err');
+  };
+  voiceRecognition.onend = () => {
+    voiceListening = false;
+    document.getElementById('voiceStart').disabled = false;
+  };
+  try { voiceRecognition.start(); }
+  catch(e) { voiceListening = false; document.getElementById('voiceStart').disabled = false; vozStatus('Não foi possível iniciar o microfone. Tente novamente.', 'err'); }
+}
+function numeroFalado(raw){
+  let t = normalizarVoz(raw).replace(/\b(menos|negativo)\b/g,'-').replace(/\b(mais|positivo)\b/g,'+');
+  const digit = t.match(/[+-]?\s*\d+(?:\s+(?:virgula|ponto)\s*\d+)?/);
+  if (digit) {
+    let v = digit[0].replace(/\s+/g,'').replace(/(?:virgula|ponto)/g,'.');
+    if (v.includes('virgula')) v=v.replace('virgula','.');
+    const n=Number(v); if(Number.isFinite(n)) return n;
+  }
+  const words = {zero:'0',um:'1',uma:'1',dois:'2',duas:'2',tres:'3',quatro:'4',cinco:'5',seis:'6',sete:'7',oito:'8',nove:'9',dez:'10',
+    onze:'11',doze:'12',treze:'13',quatorze:'14',catorze:'14',quinze:'15',dezesseis:'16',dezessete:'17',dezoito:'18',dezenove:'19',
+    vinte:'20',trinta:'30',quarenta:'40',cinquenta:'50',sessenta:'60',setenta:'70',oitenta:'80',noventa:'90'};
+  const parts=t.split(' ');
+  let sign=1; if(parts.includes('-')) sign=-1;
+  const cleaned=parts.filter(w=>w!=='-'&&w!=='+'&&w!=='menos'&&w!=='mais');
+  const sep=cleaned.findIndex(w=>w==='virgula'||w==='ponto');
+  if(sep>=0){
+    const left=cleaned.slice(0,sep).map(w=>words[w]??( /^\d+$/.test(w)?w:null)).filter(x=>x!==null);
+    const right=cleaned.slice(sep+1).map(w=>words[w]??( /^\d+$/.test(w)?w:null)).filter(x=>x!==null);
+    if(left.length&&right.length){
+      const integer=Number(left.join(''));
+      // Números depois da vírgula são interpretados como dígitos quando falados individualmente.
+      const dec=right.length>1 ? right.join('') : right[0];
+      return sign*(integer+Number('0.'+String(dec).replace(/^0+/,m=>m))/1);
+    }
+  }
+  const vals=cleaned.map(w=>words[w]??( /^\d+(?:\.\d+)?$/.test(w)?w:null)).filter(x=>x!==null);
+  if(vals.length) return sign*Number(vals.join(''));
+  return null;
+}
+function escolherFaixaNumerica(i, valor){
+  const p=PESOS[i], a=Math.abs(valor), b=p.breakpoints;
+  let v;
+  if(b.length===2) v = a < b[0] ? 0 : a < b[1] ? 0.5 : 1;
+  else v = a < b[0] ? 0 : a < b[1] ? (1/3) : a < b[2] ? (2/3) : 1;
+  if(valor<0) v=-v;
+  const select=document.getElementById('v'+i);
+  let best=null, dist=Infinity;
+  Array.from(select.options).forEach(o=>{const d=Math.abs(Number(o.value)-v);if(d<dist){dist=d;best=o;}});
+  if(best) select.value=best.value;
+  return best ? best.text : '';
+}
+function interpretarComandoVoz(frase){
+  const original=String(frase||'').trim();
+  const t=normalizarVoz(original);
+  if(!t) return {ok:false,mensagem:'Não reconheci um comando.'};
+  if(/\b(ler diagnostico|le diagnostico|diagnostico atual|como esta o painel)\b/.test(t)){
+    lerDiagnostico(); return {ok:true,mensagem:'Lendo o diagnóstico atual.',fala:'Lendo o diagnóstico atual.'};
+  }
+  if(/\b(win|variacao atual|atual do win)\b/.test(t) && /\b(atual|variacao|win)\b/.test(t)){
+    const n=numeroFalado(t.replace(/.*?\b(menos|mais|negativo|positivo|zero|um|uma|\d).*/,'$1'));
+    const v=n===null?numeroFalado(t):n;
+    if(v===null) return {ok:false,mensagem:'Não identifiquei o valor. Diga, por exemplo: WIN atual menos zero vírgula quarenta.'};
+    document.getElementById('variacaoAtual').value=v.toFixed(2); recalcular();
+    return {ok:true,mensagem:'Variação atual do WIN definida para '+fmtPct(v)+'.',fala:'Variação atual do WIN definida para '+fmtPct(v)+'.'};
+  }
+  if(/\b(gap|abertura)\b/.test(t)){
+    const n=numeroFalado(t);
+    if(n===null) return {ok:false,mensagem:'Não identifiquei o valor do gap. Exemplo: gap mais um vírgula vinte.'};
+    document.getElementById('gapAbertura').value=n.toFixed(2); recalcular();
+    return {ok:true,mensagem:'Gap de abertura definido para '+fmtPct(n)+'.',fala:'Gap definido para '+fmtPct(n)+'.'};
+  }
+  let idx=-1;
+  if(/\b(di|dis|juros brasil|di27|di29|di31|di33)\b/.test(t)) idx=0;
+  else if(/\b(acoes brasil|petrobras|ibovespa a vista)\b/.test(t)) idx=1;
+  else if(/\b(6l|seis ele|real cme|futuro do real)\b/.test(t)) idx=2;
+  else if(/\bewz\b/.test(t)) idx=3;
+  else if(/\b(adr|adrs|vale|pbr|itub|sid|ggb)\b/.test(t)) idx=4;
+  else if(/\b(agenda|dado economico|evento economico)\b/.test(t)) idx=5;
+  else if(/\bdxy\b/.test(t)) idx=6;
+  else if(/\b(yield|yields|juros eua|titulos americanos)\b/.test(t)) idx=7;
+  else if(/\b(brent|petroleo)\b/.test(t)) idx=8;
+  else if(/\bvix\b/.test(t)) idx=9;
+  else if(/\bbcom\b/.test(t)) idx=10;
+  else if(/\beem\b/.test(t)) idx=11;
+  if(idx<0) return {ok:false,mensagem:'Ativo não identificado. Diga o nome do vetor e a condição.'};
+  const isAgenda=idx===5;
+  const isSelect=idx===1||idx===4;
+  let desired=null;
+  if(isAgenda){
+    if(/\b(vazio|vazia|sem agenda|neutro|em linha)\b/.test(t)) desired='0';
+    else if(/\b(positivo forte|forte positivo|dovish|muito bom)\b/.test(t)) desired='1';
+    else if(/\b(negativo forte|forte negativo|hawkish|muito ruim)\b/.test(t)) desired='-1';
+    else if(/\b(dado bom|positivo|bom|alta)\b/.test(t)) desired='0.5';
+    else if(/\b(dado ruim|ruim|baixa|negativo)\b/.test(t)) desired='-0.5';
+  } else if(isSelect){
+    if(/\b(forte alta|muito bom|muito positiva|muito positivo)\b/.test(t)) desired='1.0';
+    else if(/\b(leve alta|bom|positiva|positivo|alta)\b/.test(t)) desired='0.5';
+    else if(/\b(neutro|em linha|neutra)\b/.test(t)) desired='0.0';
+    else if(/\b(leve baixa|ruim|negativa|negativo|baixa)\b/.test(t)) desired='-0.5';
+    else if(/\b(forte baixa|muito ruim|muito negativa|muito negativo)\b/.test(t)) desired='-1.0';
+  } else {
+    // Aceita tanto percentual falado quanto condição qualitativa para vetores numéricos.
+    let qualitativo=null;
+    if(/\b(forte alta|muito bom|fortemente positivo)\b/.test(t)) qualitativo=1;
+    else if(/\b(leve alta|positivo|positiva|bom|alta)\b/.test(t)) qualitativo=(PESOS[idx].breakpoints.length===2?0.5:1/3);
+    else if(/\b(neutro|neutra|em linha)\b/.test(t)) qualitativo=0;
+    else if(/\b(leve baixa|negativo|negativa|ruim|baixa)\b/.test(t)) qualitativo=(PESOS[idx].breakpoints.length===2?-0.5:-1/3);
+    else if(/\b(forte baixa|muito ruim|fortemente negativo)\b/.test(t)) qualitativo=-1;
+    if(qualitativo!==null){
+      const select=document.getElementById('v'+idx); let best=null,dist=Infinity;
+      Array.from(select.options).forEach(o=>{const d=Math.abs(Number(o.value)-qualitativo);if(d<dist){dist=d;best=o;}});
+      if(best) select.value=best.value;
+      recalcular();
+      const label=select.selectedOptions[0].text;
+      return {ok:true,mensagem:PESOS[idx].nome+' atualizado: '+label+'.',fala:PESOS[idx].nome+' atualizado. '+label+'.'};
+    }
+    const n=numeroFalado(t);
+    if(n===null) return {ok:false,mensagem:'Para este vetor, diga o percentual ou uma condição como forte alta, neutro ou forte baixa.'};
+    const label=escolherFaixaNumerica(idx,n);
+    recalcular();
+    return {ok:true,mensagem:PESOS[idx].nome+' atualizado para a faixa: '+label+'.',fala:PESOS[idx].nome+' atualizado para '+label+'.'};
+  }
+  if(desired===null) return {ok:false,mensagem:'Condição não identificada. Use forte alta, leve alta, neutro, leve baixa ou forte baixa.'};
+  document.getElementById('v'+idx).value=desired; recalcular();
+  const label=document.getElementById('v'+idx).selectedOptions[0].text;
+  return {ok:true,mensagem:PESOS[idx].nome+' atualizado: '+label+'.',fala:PESOS[idx].nome+' atualizado. '+label+'.'};
+}
+function fmtPct(v){return (v>=0?'+':'')+Number(v).toFixed(2).replace('.',',')+' por cento';}
+function lerDiagnostico(){
+  const score=document.getElementById('scoreVal')?.textContent||'';
+  const vetor=document.getElementById('vetorVal')?.textContent||'';
+  const atual=document.getElementById('atualVal')?.textContent||'';
+  const diag=document.getElementById('diagTxt')?.textContent||'Diagnóstico ainda não disponível.';
+  const texto='Score direcional '+score+'. Vetor principal: '+vetor+'. Variação atual: '+atual+'. '+diag;
+  falar(texto);
+  vozStatus('Lendo o diagnóstico exibido no painel.', 'ok');
+}
+
+recalcular();
+</script>
+
+</body>
+</html>
